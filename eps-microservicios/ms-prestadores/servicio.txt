@@ -1,0 +1,1 @@
+Administra la red de IPS, sus contratos y sus tarifas vigentes.

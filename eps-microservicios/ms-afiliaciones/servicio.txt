@@ -1,0 +1,1 @@
+Gestiona la afiliacion de cotizantes y beneficiarios, y las novedades al SGSSS.

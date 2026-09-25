@@ -1,0 +1,1 @@
+Autoriza servicios y procedimientos PBS y no PBS solicitados por los prestadores.

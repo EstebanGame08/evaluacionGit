@@ -1,0 +1,1 @@
+Enruta las peticiones externas hacia los microservicios internos de la EPS.

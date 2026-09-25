@@ -1,0 +1,1 @@
+Envia correos y mensajes de texto al afiliado desde los demas microservicios.
