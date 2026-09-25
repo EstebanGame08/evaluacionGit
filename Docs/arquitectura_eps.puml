@@ -1,0 +1,98 @@
+@startuml arquitectura_eps
+' Arquitectura de microservicios - EPS
+' Ingenieria de Software III (FI303290) - UNIAJC
+' Esteban Antonio Estrada Angulo - GitHub: EstebanGame08
+!pragma layout smetana
+
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName Segoe UI
+skinparam defaultFontSize 12
+skinparam roundCorner 8
+skinparam linetype ortho
+skinparam nodesep 25
+skinparam ranksep 45
+skinparam ArrowColor #44546A
+skinparam ArrowFontSize 10
+skinparam ArrowFontColor #44546A
+
+skinparam rectangle {
+  BorderColor #1F4E79
+  BackgroundColor #FFFFFF
+  FontColor #1F4E79
+}
+skinparam package {
+  BorderColor #8EA9DB
+  BackgroundColor #FAFBFD
+  FontColor #1F4E79
+  FontStyle bold
+}
+skinparam database {
+  BorderColor #548235
+  BackgroundColor #F2F8EC
+  FontColor #375623
+  FontSize 10
+}
+skinparam queue {
+  BorderColor #BF8F00
+  BackgroundColor #FFF7E6
+  FontColor #7F6000
+}
+
+title Arquitectura de microservicios — Sistema de informacion de una EPS
+
+' ---------- capa 1: canales ----------
+package "  1. Canales de acceso  " as cap1 {
+  rectangle "Portal del\nafiliado" as portal
+  rectangle "App movil" as app
+  rectangle "Portal de\nprestadores (IPS)" as portalips
+}
+
+' ---------- capa 2: gateway ----------
+rectangle "**API Gateway**  :80\nautenticacion  ·  enrutamiento  ·  rate limit" as gw #E8EEF7
+
+' ---------- capa 3: servicios + su base ----------
+package "  2. Microservicios de dominio  (una base de datos por servicio)  " as cap3 {
+  rectangle "**ms-afiliaciones**\n:8001" as afi
+  rectangle "**ms-autorizaciones**\n:8002" as aut
+  rectangle "**ms-citas**\n:8003" as cit
+  rectangle "**ms-prestadores**\n:8004" as pre
+  rectangle "**ms-cuentas-medicas**\n:8005" as cue
+
+  database "afiliaciones_db" as dbafi
+  database "autorizaciones_db" as dbaut
+  database "citas_db" as dbcit
+  database "prestadores_db" as dbpre
+  database "cuentas_db" as dbcue
+
+  afi -down-> dbafi
+  aut -down-> dbaut
+  cit -down-> dbcit
+  pre -down-> dbpre
+  cue -down-> dbcue
+}
+
+' ---------- capa 4: asincrono ----------
+package "  3. Mensajeria asincrona  " as cap4 {
+  queue "Bus de eventos\nRabbitMQ" as bus
+  rectangle "**ms-notificaciones**\n:8006" as noti
+  bus -right-> noti
+}
+
+' ---------- entrada ----------
+portal -down-> gw
+app -down-> gw
+portalips -down-> gw
+
+gw -down-> afi
+gw -down-> aut
+gw -down-> cit
+gw -down-> pre
+gw -down-> cue
+
+' ---------- eventos ----------
+afi -down-> bus : afiliacion.activada
+aut -down-> bus : autorizacion.emitida
+cit -down-> bus : cita.agendada
+
+@enduml

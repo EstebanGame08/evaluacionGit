@@ -1,0 +1,87 @@
+@startuml flujo_autorizacion
+' Flujo de una solicitud de autorizacion - EPS
+' Ingenieria de Software III (FI303290) - UNIAJC
+' Esteban Antonio Estrada Angulo - GitHub: EstebanGame08
+
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName Segoe UI
+skinparam defaultFontSize 12
+skinparam ParticipantPadding 12
+skinparam BoxPadding 14
+
+skinparam sequence {
+  ArrowColor #44546A
+  ArrowFontSize 11
+  ArrowFontColor #44546A
+  LifeLineBorderColor #8EA9DB
+  LifeLineBackgroundColor #F2F5FA
+  ParticipantBorderColor #1F4E79
+  ParticipantBackgroundColor #FFFFFF
+  ParticipantFontColor #1F4E79
+  ParticipantFontStyle bold
+  GroupBorderColor #8EA9DB
+  GroupBackgroundColor #E8EEF7
+  GroupHeaderFontColor #1F4E79
+  DividerBackgroundColor #FAFBFD
+  DividerBorderColor #8EA9DB
+  DividerFontColor #1F4E79
+}
+
+title Flujo de una solicitud de autorizacion de servicio
+
+actor "Auxiliar\nde la IPS" as ips
+participant "API Gateway" as gw
+participant "ms-autorizaciones" as aut
+participant "ms-afiliaciones" as afi
+participant "ms-prestadores" as pre
+database "autorizaciones_db" as db
+queue "Bus de eventos" as bus
+participant "ms-notificaciones" as noti
+
+== Validacion sincrona ==
+
+ips -> gw : POST /autorizaciones\n(documento, codigo CUPS)
+activate gw
+gw -> aut : enruta la solicitud
+activate aut
+
+aut -> afi : GET /afiliados/{doc}/estado
+activate afi
+afi --> aut : estado de afiliacion
+deactivate afi
+
+alt afiliado no activo
+  aut --> gw : 409 afiliado sin derechos
+  gw --> ips : solicitud rechazada
+else afiliado activo
+  aut -> pre : GET /prestadores/{nit}/contrato\n?cups={codigo}
+  activate pre
+  pre --> aut : contrato vigente y tarifa
+  deactivate pre
+
+  aut -> db : guarda la autorizacion
+  activate db
+  db --> aut : numero de autorizacion
+  deactivate db
+
+  == Notificacion asincrona ==
+
+  aut ->> bus : publica autorizacion.emitida
+  aut --> gw : 201 numero de autorizacion
+  deactivate aut
+  gw --> ips : autorizacion emitida
+  deactivate gw
+
+  bus ->> noti : consume el evento
+  activate noti
+  noti -> noti : envia correo y SMS\nal afiliado
+  deactivate noti
+end
+
+note across
+  La respuesta al auxiliar de la IPS no espera al envio de la notificacion:
+  si el servicio de correo esta caido, la autorizacion se emite igual.
+end note
+
+@enduml
